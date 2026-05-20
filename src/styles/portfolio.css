@@ -1,0 +1,993 @@
+/* ============================================================
+   Portfolio site-specific styles
+   Foundations live in /colors_and_type.css
+   ============================================================ */
+
+html, body {
+  width: 100%;
+  height: 100vh;
+  /* No native scroll — wheel/touch events drive section state. Both
+     axes are clipped: overflow-x in particular guards against any
+     descendant accidentally widening past the viewport on mobile. */
+  overflow: hidden;
+  overflow-x: hidden;
+  max-width: 100vw;
+  margin: 0;
+}
+body { color: var(--text); background: #eef0f4; }
+/* #root's overflow-x clip is mobile-only — on desktop, halos around
+   NeOrbit cards (and other shadow effects) need to extend past the
+   nominal content box without being clipped. */
+
+/* ---------- Background layers (cloud cloud) ----------
+   bg-base   — flat near-white silver base
+   bg-depth  — subtle radial gradient (lighter center, darker edges)
+   bg-cloud  — Canvas 2D particle cloud (drawn by cloud.js)
+   ----------------------------------------------------- */
+.bg-base, .bg-depth, .bg-layer {
+  position: fixed; inset: 0; pointer-events: none;
+}
+.bg-base {
+  z-index: 0;
+  background: linear-gradient(180deg, #edf0f4 0%, #e5e8ee 100%);
+}
+.bg-depth {
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 50%,
+      rgba(255,255,255,0.55) 0%,
+      rgba(238,240,244,0.0) 60%),
+    radial-gradient(ellipse 100% 100% at 50% 50%,
+      rgba(180,190,210,0.0) 60%,
+      rgba(160,170,190,0.18) 100%);
+}
+.bg-cloud { z-index: 1; }
+#cloud-canvas { width: 100%; height: 100%; display: block; }
+
+/* ---------- App shell ---------- */
+.shell {
+  position: fixed; inset: 0;
+  z-index: 2;
+  opacity: 0; transition: opacity 600ms var(--ease-out);
+}
+.shell-visible { opacity: 1; }
+
+/* Section panels stack on top of each other inside the fixed shell.
+   Visibility is driven by JS (scale + opacity + blur). */
+.section-panel {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  will-change: opacity, transform, filter;
+  transform-origin: 50% 50%;
+}
+.section-panel > .section { width: 100%; height: 100%; }
+
+/* Progress ring — small circle on the right edge. Replaces the linear
+   rail now that scroll is cyclic; a dot orbits at angle = (scrollPos/N)*360°. */
+.progress-ring {
+  position: fixed;
+  right: 24px; top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  pointer-events: none;
+}
+.progress-ring-dot {
+  /* cx/cy updated each frame by the render loop */
+  transition: none;
+}
+
+/* ---------- Sections ---------- */
+.section {
+  position: relative;
+  min-height: 100vh;
+  height: 100vh;
+  padding: var(--sp-8) var(--sp-7);
+  display: flex; align-items: center; justify-content: center;
+  /* overflow: visible so wide outer halos (box-shadow on NeOrbit
+     cards, ID-card glow, etc.) aren't clipped at the section padding
+     edge. Z-axis section transitions are handled by transform/scale
+     on the .section-panel wrapper, not by clipping here.
+     The mobile media block re-enables vertical scroll for content
+     that exceeds the viewport. */
+  overflow: visible;
+}
+.section-hero, .section-contact {
+  flex-direction: column;
+}
+
+/* Corner technical markers */
+.corner {
+  position: absolute;
+  color: var(--fg-3);
+  z-index: 5;
+}
+.corner-tl { top: var(--sp-6); left: var(--sp-7); }
+.corner-tr { top: var(--sp-6); right: var(--sp-7); }
+.corner-bl { bottom: var(--sp-6); left: var(--sp-7); }
+.corner-br { bottom: var(--sp-6); right: var(--sp-7); }
+
+.hero-card-stage {
+  perspective: 2000px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.contact-footer {
+  position: absolute;
+  bottom: var(--sp-7);
+  left: 50%; transform: translateX(-50%);
+}
+
+/* ============================================================
+   ID CARD
+   ============================================================ */
+.idcard-perspective {
+  width: 600px;
+  height: 380px;
+  cursor: pointer;
+  user-select: none;
+  /* Outer light glow — soft, cool, hugs the card silhouette.
+     Perspective lives on .hero-card-stage (the parent), per the
+     3D-flip best-practice of putting perspective one level up. */
+  filter:
+    drop-shadow(0 0 24px rgba(220, 230, 240, 0.45))
+    drop-shadow(0 0 60px rgba(200, 215, 235, 0.35));
+}
+.idcard-inner {
+  width: 100%; height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.idcard-face {
+  position: absolute; inset: 0;
+  border-radius: var(--r-card);
+  /* CRITICAL: no backdrop-filter, no overflow:hidden, no opacity.
+     ANY of those creates a stacking context that breaks 3D backface-
+     culling on Chromium. Glass + clip happen on .idcard-glass below. */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+.idcard-back { transform: rotateY(180deg); }
+
+/* Glass styling — sits INSIDE each face. The face does the rotation
+   + backface-culling; the glass child handles the visual surface. */
+.idcard-glass {
+  position: absolute; inset: 0;
+  border-radius: var(--r-card);
+  background:
+    linear-gradient(135deg,
+      rgba(255,255,255,0.42) 0%,
+      rgba(255,255,255,0.22) 40%,
+      rgba(255,255,255,0.34) 100%);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 0 28px 0 rgba(220, 230, 240, 0.45),
+    0 0 72px 0 rgba(200, 215, 235, 0.28);
+  overflow: hidden;
+}
+
+.idcard-sheen {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  transition: none;
+  opacity: 0.9;
+}
+.idcard-sheen-back { mix-blend-mode: screen; }
+
+/* Idle sheen sweep — soft diagonal highlight cycling slowly */
+.idcard-face::after {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+  background: linear-gradient(120deg,
+    transparent 35%,
+    rgba(255,255,255,0.18) 48%,
+    rgba(196,188,224,0.10) 52%,
+    transparent 65%);
+  animation: idleSheen 9s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+@keyframes idleSheen {
+  0%   { transform: translate(-20%, -10%); opacity: 0.0; }
+  20%  { opacity: 0.7; }
+  50%  { transform: translate(15%, 8%);   opacity: 0.7; }
+  80%  { opacity: 0.5; }
+  100% { transform: translate(35%, 18%);  opacity: 0.0; }
+}
+
+.idcard-bg {
+  position: relative;
+  width: 100%; height: 100%;
+  padding: 18px 22px;
+  display: flex; flex-direction: column;
+}
+
+.idcard-header {
+  display: flex; justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(10,10,10,0.08);
+}
+
+.idcard-body {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 18px;
+  flex: 1;
+  padding-top: 14px;
+}
+
+.idcard-photo {
+  width: 130px; height: 160px;
+  border-radius: 4px;
+  align-self: start;
+  margin-top: 6px;
+  /* override the dashed placeholder-frame look — real-ID hairline */
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+.idcard-photo img {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+
+.idcard-fields {
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+.idcard-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+.idcard-field { display: flex; flex-direction: column; gap: 2px; }
+.idcard-field-value {
+  font-family: var(--font-id);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(10,10,10,0.85);
+  text-shadow:
+    -1px -1px 0 rgba(255,255,255,0.55),
+     1px  1px 0 rgba(0,0,0,0.18);
+}
+.idcard-field-value-big {
+  font-size: 22px;
+  letter-spacing: 0.05em;
+  text-shadow:
+    -1px -1px 0 rgba(255,255,255,0.55),
+     1px  1px 0 rgba(0,0,0,0.20);
+}
+.idcard-field-status {
+  display: flex; align-items: center; gap: 10px;
+}
+.status-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(10, 10, 10, 0.55);
+  border: 1px solid rgba(10, 10, 10, 0.18);
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-shadow: none;
+}
+
+/* ---------- Back ---------- */
+.idcard-back-body {
+  flex: 1;
+  display: block;
+  padding-top: 14px;
+}
+.idcard-contacts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* Shrink each link to its content so the hit area doesn't extend
+     into the empty space on the right of each row. */
+  align-items: flex-start;
+}
+.idcard-contact {
+  display: flex; align-items: center; gap: 12px;
+  color: inherit; text-decoration: none;
+  padding: 4px 0;
+}
+.idcard-contact:hover .idcard-contact-value { text-decoration: underline; }
+.idcard-contact-text { display: flex; flex-direction: column; gap: 1px; }
+.idcard-contact-value {
+  font-family: var(--font-id);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(10,10,10,0.85);
+  text-shadow:
+    -1px -1px 0 rgba(255,255,255,0.5),
+     1px  1px 0 rgba(0,0,0,0.16);
+}
+.idcard-skills {
+  border-top: 1px solid rgba(10,10,10,0.08);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+.idcard-skills-line {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: rgba(10,10,10,0.62);
+  line-height: 1.5;
+}
+.idcard-footer {
+  margin-top: 6px;
+  color: rgba(10, 10, 10, 0.42);
+  letter-spacing: 0.10em;
+}
+
+/* ============================================================
+   Section grid / content
+   ============================================================ */
+.section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-9);
+  width: 100%;
+  max-width: 1480px;
+  align-items: center;
+}
+.section-grid-neorbit {
+  grid-template-columns: 0.85fr 1.15fr;   /* ≈ 42 / 58 */
+  gap: var(--sp-9);
+  align-items: center;
+}
+.section-grid-neorbit .section-head .section-body { margin-bottom: var(--sp-4); }
+.section-grid-neorbit .section-head .kv { margin-top: 0; }
+.section-eyebrow { color: var(--fg-3); margin-bottom: var(--sp-5); }
+.section-head { max-width: 580px; }
+.section-head h2 { margin: 0 0 var(--sp-5) 0; }
+.t-display-fit { font-size: clamp(72px, 8vw, 120px); }
+.section-subtitle { margin: 0 0 var(--sp-5) 0; color: var(--fg-2); font-size: 13px; }
+.section-body { margin: 0 0 var(--sp-5) 0; text-wrap: pretty; max-width: 56ch; }
+.section-stack {
+  margin-top: var(--sp-5);
+  color: var(--fg-3);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  line-height: 1.7;
+}
+.achievement {
+  display: inline-block;
+  padding: 10px 14px;
+  margin-bottom: var(--sp-5);
+  background: rgba(255,255,255,0.32);
+  backdrop-filter: blur(6px);
+  border-radius: 4px;
+  box-shadow: 0 0 24px rgba(196,188,224,0.18), 0 0 0 1px rgba(255,255,255,0.4) inset;
+}
+.achievement-text { color: var(--fg-2); font-size: 11px; }
+
+.section-ctas { display: flex; gap: var(--sp-5); }
+.btn-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: 500;
+  color: var(--fg-1);
+  text-decoration: none;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(10,10,10,0.6);
+  transition: gap var(--dur-fast) var(--ease-out);
+}
+.btn-link:hover { gap: 14px; }
+.btn-arrow { transition: transform var(--dur-fast) var(--ease-out); }
+.btn-link:hover .btn-arrow { transform: translateX(2px); }
+
+/* ---------- Visual side ---------- */
+.section-visual {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 480px;
+}
+
+/* ---------- App icons (Experience) — iOS squircle + 3D tilt ---------- */
+.apps-row { display: flex; gap: var(--sp-6); }
+.app-tile-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);                 /* ≥20 px between icon and label */
+  align-items: center;
+  perspective: 1000px;              /* 3D tilt looks correct from this distance */
+}
+.app-tile {
+  position: relative;
+  width: 150px; height: 150px;
+  border-radius: 22.5%;             /* iOS-style squircle */
+  overflow: hidden;
+  cursor: pointer;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.10));
+  transform-style: preserve-3d;
+  transition:
+    transform 0.15s ease-out,
+    filter 0.3s ease;
+  will-change: transform, filter;
+}
+.app-tile:hover {
+  filter:
+    drop-shadow(0 12px 24px rgba(0, 0, 0, 0.15))
+    drop-shadow(0 0 20px rgba(190, 210, 240, 0.40));
+}
+.app-tile-inner { width: 100%; height: 100%; border-radius: inherit; }
+.app-tile-img {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.app-tile-sheen {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.app-tile:hover .app-tile-sheen { opacity: 1; }
+.app-tile-label { color: var(--fg-2); }
+
+/* ---------- Screenshot panels ----------
+   Solid hair-line border, soft cool glow. The centre label is a mono
+   placeholder; replacing it with a real <img> just means swapping the
+   span for an image and keeping the same outer panel. */
+.screenshot-panel {
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  filter: drop-shadow(0 0 30px rgba(190, 210, 240, 0.4));
+  transition: transform 700ms var(--ease-out);
+  will-change: transform;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.screenshot-panel-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Tilted scatter (Messenger): absolute-positioned, slight 3D rotation
+   that springs flat on hover. */
+.screenshot-panel-tilted { position: absolute; }
+.section-visual .screenshot-panel-tilted:nth-of-type(1) { top: 6%;  left: 14%; }
+.section-visual .screenshot-panel-tilted:nth-of-type(2) { top: 30%; left: 40%; }
+.section-visual .screenshot-panel-tilted:nth-of-type(3) { top: 56%; left: 6%; }
+
+/* ---------- NeOrbit horizontal carousel ----------
+   5 cards in a row, all rotated rotateY(-65°) in idle, stepped along
+   X with a slight depth retreat at the edges. transform-style and
+   perspective on the gallery so the 3D rotation composes correctly.
+   Hover swings the picked card flat to camera; others slide aside. */
+.neorbit-gallery {
+  position: relative;
+  width: 100%;
+  min-height: 620px;
+  overflow: visible;
+  perspective: 2000px;
+  transform-style: preserve-3d;
+}
+.neorbit-card {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 280px;
+  /* Box ratio matches the source screenshots (1284×2400) so object-fit
+     cover doesn't have to crop sides — UI elements keep natural width. */
+  aspect-ratio: 1284 / 2400;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.5s ease;
+  will-change: transform;
+}
+
+/* Floor shadow under each card. The pseudo lives in the card's local
+   frame so it rides along with rotateY(-65°), reading as a "trail of
+   light" along the card's bottom rim rather than a literal floor
+   shadow. (A true floor reflection would need a separate container at
+   the gallery level to cancel the rotation.) */
+.neorbit-card::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 5%;
+  width: 90%;
+  height: 35px;
+  margin-top: 10px;
+  background: radial-gradient(
+    ellipse at center top,
+    rgba(40, 60, 100, 0.40) 0%,
+    rgba(40, 60, 100, 0.15) 35%,
+    transparent 70%
+  );
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+/* Card front — premium floating screenshot. Three concentric halos
+   (50/100/150 px) read as stage-light tiers close → mid → far. */
+.neorbit-card-front {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgb(20, 20, 25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.50),     /* glossy top rim */
+    0 0 50px rgba(200, 220, 250, 0.55),          /* primary halo */
+    0 0 100px rgba(180, 205, 240, 0.35),         /* mid halo */
+    0 0 150px rgba(160, 185, 230, 0.20),         /* far halo */
+    0 25px 50px rgba(40, 60, 100, 0.35);         /* drop / grounding */
+  transition: box-shadow 0.4s ease;
+}
+.neorbit-card-front img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  /* Every source screenshot in /neorbit/ has ~64 px of dark padding
+     baked in on each side. At box width 280, that's ~14 px of empty
+     space between the visible UI and the box edge — and since the
+     halo emanates from the box edge, it looked offset from the
+     content. Scaling the image up by ~11% pushes that padding out of
+     the visible box, so the UI fills edge-to-edge and halo aligns. */
+  transform: scale(1.11);
+}
+
+/* Hover intensifies the glow. The CSS :hover on .neorbit-card fires
+   concurrently with the React hovered-state flip; the box-shadow
+   transition syncs with the wrapper's transform. */
+.neorbit-card:hover .neorbit-card-front {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.60),
+    0 0 70px rgba(220, 235, 255, 0.75),
+    0 0 130px rgba(200, 220, 250, 0.45),
+    0 0 180px rgba(170, 195, 235, 0.25),
+    0 35px 60px rgba(40, 60, 100, 0.40);
+}
+
+/* While ANY card in the gallery is hovered, dim the halos of the
+   non-hovered cards. Without this, a neighbour's wide halo (especially
+   the centre card's, which is rendered at full scale in idle) bleeds
+   into the gap between cards and reads as "halo offset to the left/
+   right of the hovered card". Keep only a faint drop so the cards
+   still look grounded. */
+.neorbit-gallery-desktop:has(.neorbit-card:hover) .neorbit-card:not(:hover) .neorbit-card-front {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    0 20px 40px rgba(40, 60, 100, 0.20);
+}
+
+
+.kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 18px;
+  margin: 0;
+}
+.kv dt { padding-top: 4px; }
+
+/* ============================================================
+   LOADER — solid metaball droplets ("organic loader")
+   ============================================================ */
+.loader {
+  position: fixed; inset: 0; z-index: 100;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 50%,
+      rgba(255,255,255,0.55) 0%,
+      rgba(238,240,244,0.0) 60%),
+    linear-gradient(135deg, #ebedf1 0%, #dde0e6 50%, #e9ebef 100%);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  transition: opacity 400ms var(--ease-out), transform 400ms var(--ease-out);
+  transform-origin: 50% 50%;
+}
+.loader-fade {
+  opacity: 0;
+  transform: scale(1.1);
+  pointer-events: none;
+}
+
+/* Subtle ambient haze — just for atmosphere so the fade-out doesn't
+   pop into Hero's slightly different shade of light. Sits at the back;
+   the dark droplets read cleanly on top. */
+.loader-bg-blobs {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.loader-bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle,
+    rgba(180, 195, 220, 0.35) 0%,
+    rgba(196, 188, 218, 0.18) 38%,
+    rgba(168, 188, 220, 0.08) 62%,
+    transparent 80%);
+  mix-blend-mode: multiply;
+  filter: blur(34px);
+}
+
+.loader-metaballs {
+  position: relative;
+  z-index: 1;
+  width: 400px;
+  height: 400px;
+}
+
+/* ============================================================
+   Reduced motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  #cloud-canvas { display: none; }
+  .idcard-inner { transform: none !important; }
+  .idcard-face::after { animation: none; }
+}
+
+/* ============================================================
+   MOBILE CAROUSEL (NeOrbit) — base rules.
+   Hidden by default on desktop; @media (max-width: 767px) flips
+   the visibility below.
+   ============================================================ */
+.neorbit-gallery-mobile {
+  display: none;
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  gap: 20px;
+  /* Padding equal to (viewport - card_width) / 2 so the first and
+     last cards centre on snap. With cards at 75vw, padding is 12.5vw. */
+  padding: 24px 12.5vw 40px;
+  scrollbar-width: none;
+}
+.neorbit-gallery-mobile::-webkit-scrollbar { display: none; }
+.neorbit-card-mobile {
+  flex: 0 0 75vw;
+  aspect-ratio: 1284 / 2400;
+  scroll-snap-align: center;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgb(20, 20, 25);
+  box-shadow:
+    0 0 40px rgba(200, 220, 250, 0.45),
+    0 0 80px rgba(180, 205, 240, 0.25),
+    0 20px 40px rgba(40, 60, 100, 0.30);
+}
+.neorbit-card-mobile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Dot indicator under the mobile carousel — one dot per screenshot,
+   the dot of the currently centre-snapped card filled darker. No
+   bottom padding here; vertical breathing room comes from the
+   section's own padding so the dots-to-section-edge gap is consistent
+   with the rest of the layout. */
+.neorbit-dots {
+  display: none;          /* hidden on desktop */
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
+}
+.neorbit-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(10, 10, 10, 0.18);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+.neorbit-dot.is-active {
+  background: rgba(10, 10, 10, 0.65);
+  transform: scale(1.15);
+}
+
+/* ============================================================
+   TABLET + MOBILE (≤ 1023 px)
+   Light adjustments shared by tablet & phone.
+   ============================================================ */
+@media (max-width: 1023px) {
+  .section { padding: var(--sp-7) var(--sp-6); }
+
+  /* The 3D NeOrbit row is designed for ~1200 px of width. On tablet
+     it would otherwise spill into the text column. Scale the whole
+     gallery down so the same composition fits the narrower viewport.
+     This keeps the desktop look but compressed (per the spec:
+     "tablet — упрощённая десктопная композиция"). */
+  .neorbit-gallery-desktop {
+    transform: scale(0.72);
+    transform-origin: 50% 50%;
+  }
+
+  /* Messenger scatter also assumed lots of right-column width.
+     Shrink it on tablet. */
+  .section-grid .section-visual {
+    min-height: 380px;
+    transform: scale(0.85);
+    transform-origin: 50% 50%;
+  }
+
+  /* Display headings cap so they don't overflow narrow columns. */
+  .t-display { font-size: clamp(56px, 8vw, 96px); }
+  .t-display-fit { font-size: clamp(48px, 7vw, 96px); }
+}
+
+/* ============================================================
+   MOBILE (≤ 767 px)
+   Single-column layouts, smaller type, NeOrbit switches to swipe.
+   ============================================================ */
+@media (max-width: 767px) {
+  /* Mobile-only: clip overflow at #root so wide elements (e.g. card
+     halos or absolute children) can't introduce horizontal scroll. */
+  #root { overflow-x: hidden; max-width: 100vw; }
+
+  /* ----- Section frame: hard-pin to viewport width, 20px sides.
+     Mobile sections are NATIVELY scrollable on the Y axis — the
+     useWheelNavigation hook intercepts the section-transition only at
+     the top/bottom scroll edges. */
+  .section {
+    width: 100vw;
+    max-width: 100vw;
+    min-height: 100vh;
+    max-height: 100vh;
+    padding: var(--sp-5) 20px;        /* 24 px top/bottom — was 32, recover space */
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+    /* Centring becomes "start" so long content scrolls from the top
+       instead of being cut from the centre. */
+    align-items: flex-start;
+  }
+  .section-hero {
+    align-items: center;
+    justify-content: center;
+  }
+  .section-panel { max-width: 100vw; }
+
+  /* Hide the progress ring on mobile — it overlapped section content. */
+  .progress-ring { display: none; }
+
+  /* Text containers must not overflow horizontally. We scope this to
+     known text blocks so it doesn't clobber the ID card's intentional
+     fixed-width geometry (which scales down via transform, not width). */
+  .section-head,
+  .section-head *,
+  .section-visual:not(.neorbit-gallery-mobile),
+  .section-visual:not(.neorbit-gallery-mobile) * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .t-display,
+  .t-display-fit,
+  .section-subtitle,
+  .section-body,
+  .section-stack,
+  .achievement,
+  .achievement-text {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Corners */
+  .corner { font-size: 9px; letter-spacing: 0.08em; line-height: 1.3; max-width: 45vw; }
+  .corner-tl, .corner-tr { top: 16px; }
+  .corner-bl, .corner-br { bottom: 16px; }
+  .corner-tl, .corner-bl { left: 16px; }
+  .corner-tr, .corner-br { right: 16px; }
+
+  /* ----- Grid collapses to single column.
+     `minmax(0, 1fr)` instead of `1fr` so a wide H2 doesn't expand the
+     track via the implicit `auto` min-size and overflow the section. */
+  .section-grid,
+  .section-grid-neorbit {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-5);
+    text-align: left;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* ----- Type — smaller display so content-heavy sections fit one
+     viewport tall on iPhone SE / 8 / 13 without scrolling. ----- */
+  .t-display { font-size: clamp(40px, 13vw, 72px); line-height: 1.0; }
+  .t-display-fit { font-size: clamp(36px, 12vw, 64px); }
+  .section-head h2 { margin: 0 0 var(--sp-3) 0; }    /* was sp-5 — tighter */
+  .t-body { font-size: 14px; line-height: 1.5; overflow-wrap: break-word; }
+  .t-body-lg { font-size: 15px; }
+  .section-subtitle { font-size: 14px; overflow-wrap: break-word; margin-bottom: var(--sp-3); }
+  .section-eyebrow { margin-bottom: var(--sp-2); }
+  .section-body { font-size: 14px; max-width: 100%; overflow-wrap: break-word; margin-bottom: var(--sp-3); }
+
+  /* ----- Stack tags: wrap onto multiple lines instead of overflowing. */
+  .section-stack {
+    font-size: 10px;
+    line-height: 1.45;             /* tighter than desktop 1.7, saves rows */
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  /* ----- Hero: full-viewport flex centre. ----- */
+  .section-hero {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .hero-card-stage {
+    transform: scale(0.55);
+    transform-origin: 50% 50%;
+  }
+
+  /* ----- Experience: text up top, icons sit just below with a fixed
+     margin. Better than `justify-content: space-between` because the
+     latter let the icons drift to the very bottom of the viewport
+     where they were getting clipped under the section padding. The
+     section's bottom padding is bumped so there's clear breathing
+     room beneath the icon labels. */
+  .section[data-section="experience"] {
+    padding-bottom: 100px;
+  }
+  .section[data-section="experience"] .section-grid {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 0;
+    min-height: auto;
+  }
+  .section[data-section="experience"] .section-head { flex-shrink: 0; }
+  .section[data-section="experience"] .section-visual {
+    flex-shrink: 0;
+    margin-top: 40px;
+  }
+  .apps-row {
+    gap: var(--sp-3);
+    justify-content: space-around;
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+  .app-tile-wrap { gap: var(--sp-3); }
+  .app-tile { width: 76px; height: 76px; }
+  .app-tile-label { font-size: 11px; text-align: center; }
+  .section-stack { margin-top: var(--sp-3); margin-bottom: var(--sp-3); }
+
+  /* ----- Messenger: hide screenshots entirely on mobile — they
+     wouldn't fit alongside the title + body + CTAs in one viewport,
+     and the text already tells the story. */
+  .section[data-section="messenger"] .section-visual {
+    display: none;
+  }
+  /* Generic visual reset for any other section that might use it. */
+  .section-visual { min-height: auto; position: relative; transform: none; }
+  .achievement {
+    display: block;
+    padding: 8px 10px;
+    max-width: 100%;
+  }
+  .achievement-text {
+    font-size: 11px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    line-height: 1.4;
+  }
+  .section-ctas {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+  .btn-link { font-size: 16px; }
+
+  /* ----- NeOrbit: hide desktop carousel, show mobile one. ----- */
+  .neorbit-gallery-desktop { display: none !important; }
+  .neorbit-gallery-mobile  { display: flex; }
+  .neorbit-dots            { display: flex; }
+
+  /* Section becomes a flex column: text up top (intrinsic), carousel
+     fills the rest, dots pin to the bottom. `min-height: 0` on the
+     flex children is the standard fix that lets a flex item shrink
+     below its content's max-content (otherwise the carousel would
+     refuse to be smaller than the natural card height and overflow). */
+  .section[data-section="neorbit"] .section-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: calc(100vh - 48px);
+  }
+  .section[data-section="neorbit"] .section-head { flex-shrink: 0; }
+  .neorbit-gallery-mobile {
+    flex: 1 1 0;
+    min-height: 0;
+    align-items: center;
+    overflow-y: hidden;
+    gap: 12px;
+    padding: 16px 17.5vw;
+    width: 100vw;
+    max-width: 100vw;
+  }
+  .neorbit-dots {
+    flex-shrink: 0;
+    margin-top: 12px;
+  }
+  /* Card fills the gallery's vertical space; width is derived from
+     the source image's exact aspect ratio (1284 × 2400) so object-fit
+     cover never has to crop — the entire screenshot is always visible
+     from top to bottom. On short viewports the card becomes narrow but
+     stays complete; on tall viewports the max-width caps the result. */
+  .neorbit-card-mobile {
+    flex: 0 0 auto;
+    height: 100%;
+    max-height: 100%;
+    width: auto;
+    aspect-ratio: 1284 / 2400;
+    max-width: 65vw;
+    min-height: 0;
+  }
+
+  /* ----- Loader scale down. ----- */
+  .loader-metaballs {
+    width: 70vw;
+    height: 70vw;
+    max-width: 320px;
+    max-height: 320px;
+  }
+
+  /* ----- Progress ring smaller, tighter to edge. ----- */
+  .progress-ring { right: 12px; transform: translateY(-50%) scale(0.8); }
+}
+
+/* ============================================================
+   TINY PHONES (≤ 374 px) — iPhone SE 1st gen and similar.
+   Extra compression of large headings and the Hero card.
+   ============================================================ */
+@media (max-width: 374px) {
+  .t-display { font-size: 40px; }
+  .t-display-fit { font-size: 36px; }
+  .hero-card-stage { transform: scale(0.45); }
+  .app-tile { width: 84px; height: 84px; }
+  .app-tile-label { font-size: 10px; }
+  .corner { font-size: 8px; }
+}
+
+/* ============================================================
+   NO HOVER (touch-only devices) — disable hover-only effects.
+   ============================================================ */
+@media (hover: none) {
+  /* Light reflection follows the cursor on desktop; no cursor → no
+     point in it. Keeps the icons looking clean on tap. */
+  .app-tile-sheen { opacity: 0 !important; }
+
+  /* Tap-feedback for interactive elements. */
+  .btn-link:active,
+  .app-tile:active,
+  .idcard-perspective:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease-out;
+  }
+}

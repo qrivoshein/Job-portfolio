@@ -1,0 +1,237 @@
+/* ============================================================
+   Krivoshein Portfolio — Foundations
+   Liquid Chrome aesthetic · Premium · Russian-only
+   ============================================================ */
+
+/* ---------- Fonts (Google Fonts substitutions) ----------
+   Display:  PP Neue Montreal  → Space Grotesk (closest free)
+   Body:     Inter             → Inter (exact)
+   Mono:     JetBrains Mono    → JetBrains Mono (exact)
+   ID card:  Inter / Helvetica → Inter (semibold/medium)
+   ------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ---------- COLOR ---------- */
+  /* Chrome ramp — the background shader paints these in liquid form;
+     these tokens are for static surfaces that need to harmonize.  */
+  --chrome-100: #f4f5f7;   /* near-white silver */
+  --chrome-200: #e6e8ec;
+  --chrome-300: #d2d6dc;
+  --chrome-400: #b6bac3;
+  --chrome-500: #8c919c;   /* mid silver */
+  --chrome-600: #5b5f69;
+  --chrome-700: #3a3d44;
+
+  /* Foreground */
+  --fg-1: #0a0a0a;         /* primary text (per spec) */
+  --fg-2: #2a2c31;         /* secondary */
+  --fg-3: #5b5f69;         /* tertiary, meta, mono labels */
+  --fg-4: #8c919c;         /* placeholder, dashed-border captions */
+
+  /* Holo — cool muted accents, used at LOW opacity on holographic
+     surfaces and aura particles. Never solid, never saturated. */
+  --holo-blue:    rgba(168, 188, 220, 1);   /* #a8bcdc */
+  --holo-lilac:   rgba(196, 188, 224, 1);   /* #c4bce0 */
+  --holo-mint:    rgba(188, 216, 212, 1);   /* #bcd8d4 */
+  --aura-rgb:     180, 190, 220;            /* particle base */
+
+  /* Glass / card */
+  --glass-bg:        rgba(255, 255, 255, 0.18);
+  --glass-bg-deep:   rgba(255, 255, 255, 0.28);
+  --glass-stroke:    rgba(255, 255, 255, 0.35);  /* hairline only, sparingly */
+  --glass-glow:      rgba(255, 255, 255, 0.55);
+
+  /* Semantic */
+  --bg:           transparent;     /* shader paints the page */
+  --text:         var(--fg-1);
+  --text-muted:   var(--fg-3);
+  --text-faint:   var(--fg-4);
+  --hairline:     rgba(10, 10, 10, 0.08);
+
+  /* ---------- TYPE ---------- */
+  --font-display: 'Space Grotesk', 'PP Neue Montreal', 'Söhne', system-ui, sans-serif;
+  --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-id:      'Inter', 'Helvetica Neue', Helvetica, sans-serif;
+
+  /* Scale */
+  --t-mono-xs:    10px;
+  --t-mono-sm:    12px;
+  --t-body-sm:    14px;
+  --t-body:       17px;
+  --t-body-lg:    19px;
+  --t-display-sm: 56px;
+  --t-display:    96px;
+  --t-display-lg: 128px;
+
+  /* ---------- SPACING ---------- */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  24px;
+  --sp-6:  32px;
+  --sp-7:  48px;
+  --sp-8:  64px;
+  --sp-9:  96px;
+  --sp-10: 128px;
+
+  /* ---------- RADII (max 12px per spec) ---------- */
+  --r-2: 2px;
+  --r-4: 4px;
+  --r-card: 8px;     /* ID card */
+  --r-tile: 12px;    /* app icons, screenshot tiles */
+
+  /* ---------- GLOW (no drop-shadow — glow only) ---------- */
+  --glow-soft:  0 0 24px 0 rgba(255, 255, 255, 0.45),
+                0 0 48px 0 rgba(168, 188, 220, 0.18);
+  --glow-card:  0 0 40px 0 rgba(255, 255, 255, 0.55),
+                0 0 80px 0 rgba(196, 188, 224, 0.18),
+                0 0 1px  0 rgba(255, 255, 255, 0.4) inset;
+  --glow-tile:  0 0 28px 0 rgba(255, 255, 255, 0.40),
+                0 0 64px 0 rgba(168, 188, 220, 0.12);
+  --glow-strong:0 0 64px 0 rgba(255, 255, 255, 0.7),
+                0 0 120px 0 rgba(196, 188, 224, 0.22);
+
+  /* ---------- MOTION ---------- */
+  --ease-out:     cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in-out:  cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-liquid:  cubic-bezier(0.4, 0.0, 0.2, 1);
+  --dur-fast:   180ms;
+  --dur-mid:    420ms;
+  --dur-slow:   820ms;
+}
+
+/* ============================================================
+   Base reset + body
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  line-height: 1.5;
+  color: var(--text);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ============================================================
+   Semantic type
+   ============================================================ */
+.t-display, .h-display {
+  font-family: var(--font-display);
+  font-size: var(--t-display);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  font-weight: 500;
+  color: var(--fg-1);
+}
+.t-display-lg {
+  font-family: var(--font-display);
+  font-size: var(--t-display-lg);
+  line-height: 0.88;
+  letter-spacing: -0.035em;
+  font-weight: 500;
+}
+.t-display-sm {
+  font-family: var(--font-display);
+  font-size: var(--t-display-sm);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+.t-body {
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  line-height: 1.55;
+  color: var(--fg-2);
+  font-weight: 400;
+}
+.t-body-lg {
+  font-family: var(--font-body);
+  font-size: var(--t-body-lg);
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+.t-meta, .t-mono {
+  font-family: var(--font-mono);
+  font-size: var(--t-mono-sm);
+  line-height: 1.4;
+  color: var(--fg-3);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.t-mono-xs {
+  font-family: var(--font-mono);
+  font-size: var(--t-mono-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+/* ---------- ID card engraved type ----------
+   Double-tone: a light highlight at top-left + a dark shadow at
+   bottom-right, so the glyphs read as pressed-into-laminate. */
+.t-engraved {
+  font-family: var(--font-id);
+  color: rgba(10, 10, 10, 0.85);
+  text-shadow:
+    -1px -1px 0 rgba(255, 255, 255, 0.55),
+     1px  1px 0 rgba(0, 0, 0, 0.18);
+  letter-spacing: 0.04em;
+}
+.t-engraved-label {
+  font-family: var(--font-id);
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(10, 10, 10, 0.42);
+  text-shadow: -1px -1px 0 rgba(255, 255, 255, 0.55);
+}
+.t-engraved-value {
+  font-family: var(--font-id);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(10, 10, 10, 0.85);
+  text-shadow:
+    -1px -1px 0 rgba(255, 255, 255, 0.55),
+     1px  1px 0 rgba(0, 0, 0, 0.20);
+}
+
+/* ============================================================
+   Glass surface (used on the ID card)
+   ============================================================ */
+.glass {
+  background: linear-gradient(135deg,
+              rgba(255, 255, 255, 0.28) 0%,
+              rgba(255, 255, 255, 0.14) 50%,
+              rgba(255, 255, 255, 0.22) 100%);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: var(--glow-card);
+  border-radius: var(--r-card);
+}
+
+/* Dashed placeholder frame */
+.placeholder-frame {
+  border: 1px dashed rgba(10, 10, 10, 0.32);
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
