@@ -120,7 +120,25 @@ export function IdCard({
     return () => cancelAnimationFrame(raf);
   }, [hovering, idleSway]);
 
+  // When the cursor is hovering the back-side links, tilt is frozen
+  // back to neutral. Otherwise mousemove → tilt → links shift under
+  // the cursor → hover loses → tilt resets → loops infinitely (the
+  // classic "flickering links" 3D-tilt bug). Using a ref instead of
+  // state so toggling it doesn't trigger re-renders inside the RAF loop.
+  const isOverLinksRef = useRef(false);
+
+  const onLinkAreaEnter = useCallback(() => {
+    isOverLinksRef.current = true;
+    const s = state.current;
+    s.targetRx = 0;
+    s.targetRy = 0;
+  }, []);
+  const onLinkAreaLeave = useCallback(() => {
+    isOverLinksRef.current = false;
+  }, []);
+
   const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (isOverLinksRef.current) return;
     const rect = wrapRef.current?.getBoundingClientRect();
     if (!rect) return;
     const cx = rect.left + rect.width / 2;
@@ -136,6 +154,7 @@ export function IdCard({
 
   const onLeave = useCallback(() => {
     setHovering(false);
+    isOverLinksRef.current = false;
     const s = state.current;
     s.targetRx = 0;
     s.targetRy = 0;
@@ -163,7 +182,10 @@ export function IdCard({
         </div>
         <div ref={backRef} className="idcard-face idcard-back">
           <div className="idcard-glass">
-            <IdCardBack />
+            <IdCardBack
+              onLinkAreaEnter={onLinkAreaEnter}
+              onLinkAreaLeave={onLinkAreaLeave}
+            />
             <div className="idcard-sheen idcard-sheen-back" />
           </div>
         </div>
@@ -210,16 +232,40 @@ interface ContactLink {
   href: string;
 }
 
-function IdCardBack() {
+interface IdCardBackProps {
+  onLinkAreaEnter?: () => void;
+  onLinkAreaLeave?: () => void;
+}
+
+const EMAIL = 'egorqrivoshein@gmail.com';
+
+function IdCardBack({ onLinkAreaEnter, onLinkAreaLeave }: IdCardBackProps) {
   const contacts: ContactLink[] = [
     { label: 'TELEGRAM', value: '@qrivoshein', href: 'https://t.me/qrivoshein' },
-    { label: 'EMAIL', value: 'egorqrivoshein@gmail.com', href: 'mailto:egorqrivoshein@gmail.com' },
+    { label: 'EMAIL', value: EMAIL, href: 'mailto:' + EMAIL },
     { label: 'GITHUB', value: 'github.com/qrivoshein', href: 'https://github.com/qrivoshein' },
     { label: 'VK', value: 'vk.com/qrivoshein', href: 'https://vk.com/qrivoshein' },
   ];
 
   const skills =
     'QA · Postman · TestRail · Charles · GitLab CI/CD · Kibana · Grafana · TypeScript · React · Node.js · Python · PostgreSQL · Figma · WebSocket';
+
+  const [emailCopied, setEmailCopied] = useState(false);
+
+  const handleEmailClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard
+      .writeText(EMAIL)
+      .then(() => {
+        setEmailCopied(true);
+        window.setTimeout(() => setEmailCopied(false), 2000);
+      })
+      .catch(() => {
+        /* clipboard API may be unavailable on HTTP / older Safari —
+           silently fail; user can still long-press the visible text. */
+      });
+  };
 
   return (
     <div className="idcard-bg">
@@ -229,23 +275,47 @@ function IdCardBack() {
       </div>
 
       <div className="idcard-back-body">
-        <div className="idcard-contacts">
-          {contacts.map((c) => (
-            <a
-              key={c.label}
-              href={c.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="idcard-contact"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ContactIcon label={c.label} />
-              <div className="idcard-contact-text">
-                <span className="t-engraved-label">{c.label}</span>
-                <span className="idcard-contact-value">{c.value}</span>
-              </div>
-            </a>
-          ))}
+        <div
+          className="idcard-contacts"
+          onMouseEnter={onLinkAreaEnter}
+          onMouseLeave={onLinkAreaLeave}
+        >
+          {contacts.map((c) =>
+            c.label === 'EMAIL' ? (
+              <a
+                key={c.label}
+                href={c.href}
+                onClick={handleEmailClick}
+                className="idcard-contact"
+              >
+                <ContactIcon label={c.label} />
+                <div className="idcard-contact-text">
+                  <span className="t-engraved-label">{c.label}</span>
+                  <span className="idcard-contact-value">
+                    {c.value}
+                    {emailCopied && (
+                      <span className="idcard-contact-copied">(скопировано)</span>
+                    )}
+                  </span>
+                </div>
+              </a>
+            ) : (
+              <a
+                key={c.label}
+                href={c.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="idcard-contact"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ContactIcon label={c.label} />
+                <div className="idcard-contact-text">
+                  <span className="t-engraved-label">{c.label}</span>
+                  <span className="idcard-contact-value">{c.value}</span>
+                </div>
+              </a>
+            ),
+          )}
         </div>
       </div>
 

@@ -295,8 +295,31 @@ body { color: var(--text); background: #eef0f4; }
   display: flex; align-items: center; gap: 12px;
   color: inherit; text-decoration: none;
   padding: 4px 0;
+  /* No transform / movement on hover — only colour transitions, so
+     the cursor never "loses" the link mid-hover (would otherwise
+     trigger flicker against the 3D-tilt). */
+  transition: color 0.15s ease;
+  cursor: pointer;
 }
 .idcard-contact:hover .idcard-contact-value { text-decoration: underline; }
+
+/* "(скопировано)" indicator that pops next to the email value for ~2s
+   after the address is copied to the clipboard. */
+.idcard-contact-copied {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: rgba(10, 10, 10, 0.42);
+  text-shadow: none;
+  animation: idcard-copied-fade-in 0.18s ease-out;
+}
+@keyframes idcard-copied-fade-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 .idcard-contact-text { display: flex; flex-direction: column; gap: 1px; }
 .idcard-contact-value {
   font-family: var(--font-id);
