@@ -1,0 +1,28 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback — any unknown route serves index.html so client-side
+# navigation (if added later) doesn't 404 on direct hits.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Force the correct Content-Type on Vite's emitted JS bundles. Some
+# Netlify edges return `application/octet-stream` by default, which the
+# browser refuses for `<script type="module">` per HTML spec.
+[[headers]]
+  for = "/assets/*.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+
+[[headers]]
+  for = "/assets/*.mjs"
+  [headers.values]
+    Content-Type = "application/javascript"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Content-Type = "application/javascript"
