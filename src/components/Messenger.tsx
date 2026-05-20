@@ -26,10 +26,6 @@ export function Messenger() {
             </span>
           </div>
           <div className="section-ctas">
-            <a className="btn-link" href="#" onClick={(e) => e.preventDefault()}>
-              <span>Live demo</span>
-              <span className="btn-arrow">→</span>
-            </a>
             <a
               className="btn-link"
               href="https://github.com/qrivoshein/secure-messenger"
