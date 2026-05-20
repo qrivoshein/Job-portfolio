@@ -279,6 +279,14 @@ function IdCardBack({ onLinkAreaEnter, onLinkAreaLeave }: IdCardBackProps) {
           className="idcard-contacts"
           onMouseEnter={onLinkAreaEnter}
           onMouseLeave={onLinkAreaLeave}
+          /* Swallow ALL pointer events that originate inside the
+             contacts area — clicks in the gap between links would
+             otherwise bubble to the card's flip handler. Covers
+             click + mousedown + touchstart so neither the desktop
+             nor mobile flip-trigger fires. */
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           {contacts.map((c) =>
             c.label === 'EMAIL' ? (
