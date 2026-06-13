@@ -28,11 +28,11 @@ export function Messenger() {
           <div className="section-ctas">
             <a
               className="btn-link"
-              href="https://github.com/qrivoshein/secure-messenger"
+              href="https://qrivoshein.github.io/secure-messenger/"
               target="_blank"
               rel="noopener noreferrer"
             >
-              <span>GitHub</span>
+              <span>ДЕМО</span>
               <span className="btn-arrow">→</span>
             </a>
           </div>
