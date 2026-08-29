@@ -10,7 +10,7 @@ export function Experience() {
           <p className="t-meta section-subtitle">
             Система Глобус · QA Engineer
             <br />
-            Июнь 2022 — настоящее время · 3+ года
+            Июнь 2025 — настоящее время
           </p>
           <p className="t-body section-body">
             Тестирование трёх продуктов: клиентского приложения с системой лояльности,
